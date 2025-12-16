@@ -17,7 +17,7 @@ print(BASE_DIR)
 # -----------------------------
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", cast=bool)
-ALLOWED_HOSTS = ["127.0.0.1","localhost", "backend-company-task3.onrender.com"]
+ALLOWED_HOSTS = ["127.0.0.1","localhost", "backend-company-task3.onrender.com", "frontend-company-task-i3ch.vercel.app"]
 
 # -----------------------------
 # FRONTEND URL
@@ -160,12 +160,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://backend-company-task3.onrender.com",
+    "https://frontend-company-task-i3ch.vercel.app"
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://backend-company-task3.onrender.com",
+    "https://frontend-company-task-i3ch.vercel.app"
 ]
 
 CORS_ALLOW_HEADERS = [
