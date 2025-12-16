@@ -22,12 +22,18 @@
 """
 URL configuration for chatapplication project.
 """
-
+from django.http import JsonResponse
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+def health(request):
+    return JsonResponse({
+        "status": "ok",
+        "service": "chat-backend",
+    })
 urlpatterns = [
+    path("", health),
     path('admin/', admin.site.urls),
     
     # JWT Authentication endpoints
