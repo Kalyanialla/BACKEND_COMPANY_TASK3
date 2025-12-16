@@ -35,7 +35,10 @@ DATABASES = {
         "PASSWORD": config("DB_PASSWORD"),
         "HOST": config("DB_HOST"),
         "PORT": config("DB_PORT", cast=int),
-        "OPTIONS": {"charset": "utf8mb4"},
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            "ssl": {"ssl-mode": "REQUIRED"},  
+        },
     }
 }
 
