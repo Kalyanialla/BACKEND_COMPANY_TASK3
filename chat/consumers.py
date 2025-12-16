@@ -266,6 +266,172 @@
 
 
 
+# import json
+# import logging
+# from urllib.parse import parse_qs
+
+# from channels.generic.websocket import AsyncWebsocketConsumer
+# from channels.db import database_sync_to_async
+# from django.contrib.auth.models import User
+# from rest_framework_simplejwt.tokens import AccessToken
+# from rest_framework_simplejwt.exceptions import TokenError
+
+# from .models import ChatRoom, Message, UserProfile
+
+# logger = logging.getLogger(__name__)
+
+
+# class ChatConsumer(AsyncWebsocketConsumer):
+
+#     async def connect(self):
+#         try:
+#             query = parse_qs(self.scope["query_string"].decode())
+#             token = query.get("token", [None])[0]
+
+#             self.user = await self.authenticate_user(token)
+#             if not self.user:
+#                 await self.close(code=4001)
+#                 return
+
+#             self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
+#             self.room_group_name = f"chat_{self.room_id}"
+
+#             is_member = await self.verify_room_membership()
+#             if not is_member:
+#                 await self.close(code=4003)
+#                 return
+
+#             await self.accept()
+
+#             await self.channel_layer.group_add(
+#                 self.room_group_name,
+#                 self.channel_name
+#             )
+
+#             await self.set_user_online(True)
+
+#         except Exception:
+#             logger.error("WebSocket connect error", exc_info=True)
+#             await self.close(code=4004)
+
+# async def connect(self):
+#     try:
+#         query = parse_qs(self.scope["query_string"].decode())
+#         token = query.get("token", [None])[0]
+
+#         self.user = await self.authenticate_user(token)
+#         if not self.user:
+#             await self.close(code=4001)
+#             return
+
+#         self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
+#         self.room_group_name = f"chat_{self.room_id}"
+
+#         is_member = await self.verify_room_membership()
+#         if not is_member:
+#             await self.close(code=4003)
+#             return
+
+#         # ✅ JOIN GROUP FIRST
+#         await self.channel_layer.group_add(
+#             self.room_group_name,
+#             self.channel_name
+#         )
+
+#         # ✅ THEN ACCEPT
+#         await self.accept()
+
+#         await self.set_user_online(True)
+
+#         logger.info(f"WS CONNECTED user={self.user.id} room={self.room_id}")
+#         logger.info(f"TOKEN RECEIVED: {token}")
+#         logger.info(f"AUTH USER: {self.user}")
+
+#     except Exception:
+#         logger.error("WebSocket connect error", exc_info=True)
+#         await self.close(code=4004)
+
+
+#     async def disconnect(self, close_code):
+#         try:
+#             if hasattr(self, "user") and self.user:
+#                 await self.set_user_online(False)
+
+#             if hasattr(self, "room_group_name"):
+#                 await self.channel_layer.group_discard(
+#                     self.room_group_name,
+#                     self.channel_name
+#                 )
+#         except Exception:
+#             logger.error("WebSocket disconnect error", exc_info=True)
+
+#     async def receive(self, text_data):
+#         try:
+#             data = json.loads(text_data)
+
+#             content = data.get("content", "").strip()
+#             if not content:
+#                 return
+
+#             message = await self.save_message(content)
+
+#             await self.channel_layer.group_send(
+#                 self.room_group_name,
+#                 {
+#                     "type": "chat_message",
+#                     "message": {
+#                         "id": message.id,
+#                         "content": content,
+#                         "sender": {
+#                             "id": self.user.id,
+#                             "username": self.user.username,
+#                         },
+#                         "timestamp": message.timestamp.isoformat(),
+#                     }
+#                 }
+#             )
+
+#         except Exception:
+#             logger.error("WebSocket receive error", exc_info=True)
+
+#     async def chat_message(self, event):
+#         await self.send(text_data=json.dumps({
+#             "type": "message",
+#             "message": event["message"]
+#         }))
+
+#     # ================= DB HELPERS =================
+
+#     @database_sync_to_async
+#     def authenticate_user(self, token):
+#         try:
+#             access = AccessToken(token)
+#             return User.objects.get(id=access["user_id"])
+#         except Exception:
+#             return None
+
+#     @database_sync_to_async
+#     def verify_room_membership(self):
+#         try:
+#             room = ChatRoom.objects.get(id=self.room_id)
+#             return room.members.filter(id=self.user.id).exists()
+#         except ChatRoom.DoesNotExist:
+#             return False
+
+#     @database_sync_to_async
+#     def save_message(self, content):
+#         room = ChatRoom.objects.get(id=self.room_id)
+#         message = Message.objects.create(room=room, sender=self.user)
+#         message.encrypt_message(content)
+#         message.save()
+#         return message
+
+#     @database_sync_to_async
+#     def set_user_online(self, is_online):
+#         profile, _ = UserProfile.objects.get_or_create(user=self.user)
+#         profile.is_online = is_online
+#         profile.save()
+
 import json
 import logging
 from urllib.parse import parse_qs
@@ -274,7 +440,6 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework_simplejwt.exceptions import TokenError
 
 from .models import ChatRoom, Message, UserProfile
 
@@ -283,36 +448,49 @@ logger = logging.getLogger(__name__)
 
 class ChatConsumer(AsyncWebsocketConsumer):
 
+    # ===================== CONNECT =====================
+
     async def connect(self):
         try:
+            # 1️⃣ Get token from query params
             query = parse_qs(self.scope["query_string"].decode())
             token = query.get("token", [None])[0]
 
+            # 2️⃣ Authenticate user
             self.user = await self.authenticate_user(token)
             if not self.user:
                 await self.close(code=4001)
                 return
 
+            # 3️⃣ Get room info
             self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
             self.room_group_name = f"chat_{self.room_id}"
 
+            # 4️⃣ Check room membership
             is_member = await self.verify_room_membership()
             if not is_member:
                 await self.close(code=4003)
                 return
 
-            await self.accept()
-
+            # 5️⃣ Join group FIRST
             await self.channel_layer.group_add(
                 self.room_group_name,
                 self.channel_name
             )
 
+            # 6️⃣ Accept connection
+            await self.accept()
+
+            # 7️⃣ Set user online
             await self.set_user_online(True)
 
+            logger.info(f"✅ WS CONNECTED user={self.user.id} room={self.room_id}")
+
         except Exception:
-            logger.error("WebSocket connect error", exc_info=True)
+            logger.error("❌ WebSocket connect error", exc_info=True)
             await self.close(code=4004)
+
+    # ===================== DISCONNECT =====================
 
     async def disconnect(self, close_code):
         try:
@@ -324,14 +502,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     self.room_group_name,
                     self.channel_name
                 )
+
+            logger.info("🔌 WebSocket disconnected")
+
         except Exception:
-            logger.error("WebSocket disconnect error", exc_info=True)
+            logger.error("❌ WebSocket disconnect error", exc_info=True)
+
+    # ===================== RECEIVE MESSAGE =====================
 
     async def receive(self, text_data):
         try:
             data = json.loads(text_data)
-
             content = data.get("content", "").strip()
+
             if not content:
                 return
 
@@ -354,7 +537,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
         except Exception:
-            logger.error("WebSocket receive error", exc_info=True)
+            logger.error("❌ WebSocket receive error", exc_info=True)
+
+    # ===================== SEND MESSAGE =====================
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
@@ -362,7 +547,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "message": event["message"]
         }))
 
-    # ================= DB HELPERS =================
+    # ===================== DB HELPERS =====================
 
     @database_sync_to_async
     def authenticate_user(self, token):
