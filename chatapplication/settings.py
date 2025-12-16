@@ -11,18 +11,18 @@ from decouple import config
 # BASE DIR
 # -----------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+print(BASE_DIR)
 # -----------------------------
 # SECURITY
 # -----------------------------
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")])
+ALLOWED_HOSTS = ["127.0.0.1","localhost"]
 
 # -----------------------------
 # FRONTEND URL
 # -----------------------------
-FRONTEND_URL = config("FRONTEND_URL")
+# FRONTEND_URL = config("FRONTEND_URL")
 
 # -----------------------------
 # DATABASE
@@ -151,9 +151,9 @@ SIMPLE_JWT = {
 # -----------------------------
 # CORS / CSRF
 # -----------------------------
-CORS_ALLOWED_ORIGINS = [FRONTEND_URL] if FRONTEND_URL else []
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = [FRONTEND_URL] if FRONTEND_URL else []
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 CORS_ALLOW_HEADERS = [
     'accept',
