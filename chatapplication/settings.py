@@ -17,7 +17,7 @@ print(BASE_DIR)
 # -----------------------------
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", cast=bool)
-ALLOWED_HOSTS = ["127.0.0.1","localhost"]
+ALLOWED_HOSTS = ["127.0.0.1","localhost", "backend-company-task3.onrender.com"]
 
 # -----------------------------
 # FRONTEND URL
@@ -152,8 +152,8 @@ SIMPLE_JWT = {
 # CORS / CSRF
 # -----------------------------
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "https://backend-company-task3.onrender.com"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "https://backend-company-task3.onrender.com"]
 
 CORS_ALLOW_HEADERS = [
     'accept',
